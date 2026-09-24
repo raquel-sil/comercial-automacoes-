@@ -263,7 +263,6 @@ def buscar_contatos_rh_global_apollo(domain_empresa, limite=3):
             "Recruiter",
             "Talent Acquisition",
             "Recursos Humanos",
-            "Gente e Gestão",
             "Gente e Gestao",
             "Head de RH",
             "Diretor de RH",
