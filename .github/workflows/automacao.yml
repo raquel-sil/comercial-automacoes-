@@ -2,9 +2,9 @@ name: Automacao BDR Start RH
 
 on:
   schedule:
-    # Roda automaticamente de segunda a sexta às 09:00 UTC (06:00 no horário de Brasília)
-    - cron: '0 9 * * 1-5'
-  workflow_dispatch: # Adiciona um botão para disparar manualmente quando quiser
+    # Roda toda quinta-feira às 12:00 UTC (09:00 no Horário de Brasília)
+    - cron: '0 12 * * 4'
+  workflow_dispatch:
 
 jobs:
   executar-script:
