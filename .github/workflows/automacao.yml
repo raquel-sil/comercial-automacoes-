@@ -1,0 +1,30 @@
+name: Automacao BDR Start RH
+
+on:
+  schedule:
+    # Roda automaticamente de segunda a sexta às 09:00 UTC (06:00 no horário de Brasília)
+    - cron: '0 9 * * 1-5'
+  workflow_dispatch: # Adiciona um botão para disparar manualmente quando quiser
+
+jobs:
+  executar-script:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar codigo do repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar ambiente Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Instalar bibliotecas requeridas
+        run: pip install requests
+
+      - name: Executar Automacao
+        env:
+          HUBSPOT_ACCESS_TOKEN: ${{ secrets.HUBSPOT_ACCESS_TOKEN }}
+          APOLLO_API_KEY: ${{ secrets.APOLLO_API_KEY }}
+          JOEL_EMAIL_PASSWORD: ${{ secrets.JOEL_EMAIL_PASSWORD }}
+        # IMPORTANTE: Altere o nome abaixo para o nome exato do seu arquivo .py no GitHub
+        run: python script.py
