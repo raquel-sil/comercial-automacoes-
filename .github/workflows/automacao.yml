@@ -26,5 +26,5 @@ jobs:
           HUBSPOT_ACCESS_TOKEN: ${{ secrets.HUBSPOT_ACCESS_TOKEN }}
           APOLLO_API_KEY: ${{ secrets.APOLLO_API_KEY }}
           JOEL_EMAIL_PASSWORD: ${{ secrets.JOEL_EMAIL_PASSWORD }}
-        # IMPORTANTE: Altere o nome abaixo para o nome exato do seu arquivo .py no GitHub
+      
         run: python buscar_empresas_aleatorias_github.py
