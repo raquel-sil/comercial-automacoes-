@@ -1,6 +1,7 @@
 import datetime
 from datetime import datetime, timedelta, timezone
 import os
+import random  # Importado para sorteio de páginas aleatórias
 import re
 import smtplib
 import time
@@ -458,19 +459,21 @@ def buscar_contatos_empresa_apollo(domain_empresa, limite=3):
 
 
 # 5. ORQUESTRADOR PRINCIPAL
-def executar_automacao_apollo(limite_lote=1):
+def executar_automacao_apollo(limite_lote=10):
     empresas_criadas = 0
-    pagina_atual = 1
+
+    # Sorteia uma página inicial aleatória entre 1 e 100 a cada execução
+    pagina_atual = random.randint(1, 100)
 
     print(
-        f"Iniciando automação Apollo -> HubSpot (Meta: {limite_lote} novas empresas para o Joel)...\n"
+        f"Iniciando automação Apollo -> HubSpot (Página inicial sorteada: {pagina_atual} | Meta: {limite_lote} novas empresas para o Joel)...\n"
     )
 
     while empresas_criadas < limite_lote:
         empresas_apollo = buscar_empresas_apollo(pagina=pagina_atual)
 
         if not empresas_apollo:
-            print("Nenhuma outra empresa encontrada no Apollo.")
+            print(f"Nenhuma outra empresa encontrada na página {pagina_atual} do Apollo.")
             break
 
         for emp in empresas_apollo:
@@ -565,4 +568,4 @@ def executar_automacao_apollo(limite_lote=1):
 
 # EXECUÇÃO
 if __name__ == "__main__":
-    executar_automacao_apollo(limite_lote=1)
+    executar_automacao_apollo(limite_lote=10)
