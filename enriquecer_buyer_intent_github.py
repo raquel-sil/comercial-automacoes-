@@ -272,6 +272,7 @@ def buscar_contatos_rh_global_apollo(domain_empresa, limite=3):
             "Head of People",
             "Chief People Officer",
         ],
+        "person_locations": ["Brazil"]
         "page": 1,
         "per_page": 50,
     }
