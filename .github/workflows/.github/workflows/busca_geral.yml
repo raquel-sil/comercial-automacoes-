@@ -32,4 +32,4 @@ jobs:
           JOEL_EMAIL_ADDRESS: ${{ secrets.JOEL_EMAIL_ADDRESS }}
           JOEL_EMAIL_PASSWORD: ${{ secrets.JOEL_EMAIL_PASSWORD }}
         run: |
-          python buscar_empresas_aleatorias_github.py
+          python buscar_empresas_vagas_RPO_github.py
