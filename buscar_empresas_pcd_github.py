@@ -86,6 +86,16 @@ def limpar_dominio(url: str) -> str:
     d = d.replace("https://", "").replace("http://", "").replace("www.", "")
     return d.split("/")[0]
 
+def adicionar_dias_uteis(data_inicial, dias_uteis_prazo):
+    """Soma dias à data inicial, pulando sábados (5) e domingos (6)."""
+    data_atual = data_inicial
+    dias_adicionados = 0
+    while dias_adicionados < dias_uteis_prazo:
+        data_atual += timedelta(days=1)
+        if data_atual.weekday() < 5:  # Segunda a Sexta
+            dias_adicionados += 1
+    return data_atual
+
 def disparar_email_joel(email_destino, nome_contato, nome_empresa):
     if not JOEL_EMAIL_PASSWORD:
         print(f"ERRO DE ENVIO: JOEL_EMAIL_PASSWORD não foi configurada nas Secrets do GitHub. E-mail não enviado para {email_destino}.")
@@ -127,8 +137,8 @@ def criar_cadencia_tarefas_hubspot(contact_id, bdr_id, bdr_name, nome_lead, empr
 
     agora_utc = datetime.now(timezone.utc)
     for t in tarefas:
-        data_vencimento = agora_utc + timedelta(days=t["dias_prazo"])
-        vencimento_iso = data_vencimento.strftime("%Y-%m-%dT%H:%M:%SZ")
+        data_vencimento = adicionar_dias_uteis(agora_utc, t["dias_prazo"])
+        vencimento_ms = int(data_vencimento.timestamp() * 1000)
 
         payload = {
             "properties": {
@@ -136,7 +146,7 @@ def criar_cadencia_tarefas_hubspot(contact_id, bdr_id, bdr_name, nome_lead, empr
                 "hs_task_status": t.get("status", "NOT_STARTED"),
                 "hs_task_type": t["tipo"],
                 "hubspot_owner_id": str(bdr_id),
-                "hs_timestamp": vencimento_iso,
+                "hs_timestamp": vencimento_ms,
             },
             "associations": [
                 {
@@ -146,9 +156,11 @@ def criar_cadencia_tarefas_hubspot(contact_id, bdr_id, bdr_name, nome_lead, empr
             ],
         }
         try:
-            requests.post(url, headers=HEADERS_HUBSPOT, json=payload)
+            res = requests.post(url, headers=HEADERS_HUBSPOT, json=payload)
+            if res.status_code not in [200, 201]:
+                print(f"ERRO AO CRIAR TAREFA '{t['titulo']}': {res.status_code} - {res.text}")
         except Exception as e:
-            print(f"Falha na conexão com a API de Tarefas: {e}")
+            print(f"Falha na requisição com a API de Tarefas: {e}")
 
 
 # INTEGRAÇÃO HUBSPOT (VERIFICAÇÃO E CRIAÇÃO)
