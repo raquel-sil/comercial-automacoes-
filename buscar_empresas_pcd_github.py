@@ -14,7 +14,7 @@ from apify_client import ApifyClient
 HUBSPOT_ACCESS_TOKEN = os.getenv("HUBSPOT_ACCESS_TOKEN")
 APOLLO_API_KEY = os.getenv("APOLLO_API_KEY")
 APIFY_TOKEN = os.getenv("APIFY_TOKEN")
-JOEL_OWNER_ID = os.getenv("JOEL_OWNER_ID", "90392771")
+JOEL_OWNER_ID = os.getenv("90392771")
 
 LIMITE_NOVAS_EMPRESAS = 10  # Trava máxima de empresas cadastradas por execução
 
