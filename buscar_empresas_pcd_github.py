@@ -14,13 +14,15 @@ from apify_client import ApifyClient
 HUBSPOT_ACCESS_TOKEN = os.getenv("HUBSPOT_ACCESS_TOKEN")
 APOLLO_API_KEY = os.getenv("APOLLO_API_KEY")
 APIFY_TOKEN = os.getenv("APIFY_TOKEN")
-JOEL_OWNER_ID = os.getenv("90392771")
+
+# ID FIXO DO ANTONY PARA VAGAS PCD
+ANTONY_OWNER_ID = "90392771"
 
 LIMITE_NOVAS_EMPRESAS = 10  # Trava máxima de empresas cadastradas por execução
 
 SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 587
-JOEL_EMAIL_ADDRESS = os.getenv("JOEL_EMAIL_ADDRESS", "joel@startrh.io")
+JOEL_EMAIL_ADDRESS = os.getenv("JOEL_EMAIL_ADDRESS") or "joel@startrh.io"
 JOEL_EMAIL_PASSWORD = os.getenv("JOEL_EMAIL_PASSWORD")
 
 HEADERS_HUBSPOT = {
@@ -85,6 +87,10 @@ def limpar_dominio(url: str) -> str:
     return d.split("/")[0]
 
 def disparar_email_joel(email_destino, nome_contato, nome_empresa):
+    if not JOEL_EMAIL_PASSWORD:
+        print(f"ERRO DE ENVIO: JOEL_EMAIL_PASSWORD não foi configurada nas Secrets do GitHub. E-mail não enviado para {email_destino}.")
+        return False, None, None
+
     try:
         assunto = EMAIL_ASSUNTO.format(nome=nome_contato, empresa=nome_empresa)
         corpo = EMAIL_CORPO_HTML.format(nome=nome_contato, empresa=nome_empresa)
@@ -103,7 +109,7 @@ def disparar_email_joel(email_destino, nome_contato, nome_empresa):
         print(f"E-mail enviado com sucesso para {email_destino}!")
         return True, assunto, corpo
     except Exception as e:
-        print(f"Falha ao enviar e-mail para {email_destino}: {e}")
+        print(f"Falha ao enviar e-mail via SMTP para {email_destino}: {e}")
         return False, None, None
 
 def criar_cadencia_tarefas_hubspot(contact_id, bdr_id, bdr_name, nome_lead, empresa_lead):
@@ -145,7 +151,7 @@ def criar_cadencia_tarefas_hubspot(contact_id, bdr_id, bdr_name, nome_lead, empr
             print(f"Falha na conexão com a API de Tarefas: {e}")
 
 
-# INTEGRACAO HUBSPOT (VERIFICAÇÃO E CRIAÇÃO)
+# INTEGRAÇÃO HUBSPOT (VERIFICAÇÃO E CRIAÇÃO)
 
 def empresa_existe_no_hubspot(dominio):
     """Consulta rápida no CRM para evitar gastar qualquer outro crédito de API."""
@@ -169,7 +175,7 @@ def criar_empresa_hubspot(nome, dominio, num_vagas_pcd=0):
             "name": nome,
             "domain": dominio,
             "description": f"Importado via Apify. Empresa com {num_vagas_pcd} vaga(s) PCD/Inclusiva(s) aberta(s).",
-            "hubspot_owner_id": JOEL_OWNER_ID,
+            "hubspot_owner_id": str(ANTONY_OWNER_ID),
             "lifecyclestage": "lead",
         }
     }
@@ -187,7 +193,7 @@ def criar_nota_empresa_hubspot(company_id, texto_nota):
         "properties": {
             "hs_note_body": texto_nota,
             "hs_timestamp": timestamp_ms,
-            "hubspot_owner_id": JOEL_OWNER_ID,
+            "hubspot_owner_id": str(ANTONY_OWNER_ID),
         },
         "associations": [
             {
@@ -219,7 +225,7 @@ def obter_ou_criar_contato_hubspot(email, nome="", sobrenome="", cargo="", linke
             "jobtitle": str(cargo),
             "hs_linkedin_url": url_linkedin,
             "linkedinbio": url_linkedin,
-            "hubspot_owner_id": JOEL_OWNER_ID,
+            "hubspot_owner_id": str(ANTONY_OWNER_ID),
         }
     }
     res_c = requests.post(url_create, headers=HEADERS_HUBSPOT, json=payload_create)
@@ -241,7 +247,7 @@ def registrar_email_enviado_no_hubspot(contact_id, assunto, corpo_html):
             "hs_email_text": corpo_html,
             "hs_email_status": "SENT",
             "hs_timestamp": timestamp_ms,
-            "hubspot_owner_id": JOEL_OWNER_ID,
+            "hubspot_owner_id": str(ANTONY_OWNER_ID),
         },
         "associations": [
             {
@@ -318,7 +324,7 @@ def buscar_contatos_empresa_apollo(domain_empresa, limite=3):
 def executar_automacao_pcd():
     print("Iniciando raspagem de vagas PCD via Apify (Com limite para economizar créditos)...")
 
-   # 1. Parâmetros ajustados para o Scraper do Curious Coder (PCD + Últimos 7 dias)
+    # 1. Parâmetros ajustados para o Scraper do Curious Coder (PCD + Últimos 7 dias)
     run_input = {
         "title": 'PCD OR "Pessoa com Deficiencia" OR "Pessoa com Deficiência" OR Inclusiva OR "Ações Afirmativas"',
         "location": "Brazil",
@@ -326,15 +332,14 @@ def executar_automacao_pcd():
         "count": 60,                # Limite de vagas coletadas no lote
     }
 
-    # 2. Execução chamando o Actor exato da imagem
+    # 2. Execução chamando o Actor exato
     run = apify_client.actor("curious_coder/linkedin-jobs-scraper").call(run_input=run_input)
-    # Forma corrigida (compatível com objeto e dicionário):
     dataset_id = run.get("defaultDatasetId") if isinstance(run, dict) else run.default_dataset_id
     dataset_items = apify_client.dataset(dataset_id).list_items().items
 
     print(f"Total de vagas raspadas pelo Apify no lote: {len(dataset_items)}")
 
-    # 2. Agrupar contagem de vagas e capturar domínio
+    # 3. Agrupar contagem de vagas e capturar domínio
     empresas_vagas = Counter()
     empresas_dominios = {}
 
@@ -350,9 +355,8 @@ def executar_automacao_pcd():
 
     empresas_processadas = 0
 
-    # 3. Iterar sobre empresas encontradas
+    # 4. Iterar sobre empresas encontradas
     for nome_empresa, total_vagas_pcd in empresas_vagas.items():
-        # TRAVA DE PARADA: Se já processou 10 novas empresas, encerra imediatamente
         if empresas_processadas >= LIMITE_NOVAS_EMPRESAS:
             print(f"\nLimite de {LIMITE_NOVAS_EMPRESAS} novas empresas atingido. Encerrando execução!")
             break
@@ -365,25 +369,25 @@ def executar_automacao_pcd():
             print(f"Pulado: Domínio não encontrado para '{nome_empresa}'.")
             continue
 
-        # CHECAGEM ANTES DO APOLLO: Se já existe no HubSpot, ignora e NÃO consome créditos do Apollo
+        # CHECAGEM ANTES DO APOLLO: Se já existe no HubSpot, ignora e NÃO consome créditos
         if empresa_existe_no_hubspot(dominio):
             print(f"Pulado: Empresa '{nome_empresa}' ({dominio}) já existe no HubSpot. Créditos mantidos intactos.")
             continue
 
-        # Só consulta o Apollo se a empresa passou no filtro de "NÃO EXISTE NO HUBSPOT"
+        # Só consulta o Apollo se a empresa não existir no HubSpot
         contatos = buscar_contatos_empresa_apollo(dominio, limite=3)
         if not contatos:
             print(f"Pulado: Nenhum contato de RH no Brasil encontrado via Apollo para '{nome_empresa}'.")
             continue
 
-        # 4. Criação da Empresa no CRM
+        # 5. Criação da Empresa no CRM
         company_id = criar_empresa_hubspot(nome_empresa, dominio, num_vagas_pcd=total_vagas_pcd)
         if not company_id:
             continue
 
         print(f"Empresa '{nome_empresa}' criada no HubSpot (ID: {company_id})")
 
-        # 5. Adiciona Observação/Nota na Empresa
+        # 6. Adiciona Observação/Nota na Empresa
         texto_nota = (
             f"REGISTRO DE VAGAS PCD:\n"
             f"Esta empresa possui {total_vagas_pcd} vaga(s) PCD/Inclusiva(s) aberta(s) no LinkedIn "
@@ -391,7 +395,7 @@ def executar_automacao_pcd():
         )
         criar_nota_empresa_hubspot(company_id, texto_nota)
 
-        # 6. Processa os contatos, e-mail e tarefas
+        # 7. Processa os contatos, e-mail e tarefas
         for c in contatos:
             nome_contato = c["nome"] or "Olá"
             contact_id = obter_ou_criar_contato_hubspot(
@@ -415,13 +419,12 @@ def executar_automacao_pcd():
 
                 criar_cadencia_tarefas_hubspot(
                     contact_id=contact_id,
-                    bdr_id=JOEL_OWNER_ID,
-                    bdr_name="Joel",
+                    bdr_id=ANTONY_OWNER_ID,
+                    bdr_name="Antony",
                     nome_lead=nome_contato,
                     empresa_lead=nome_empresa,
                 )
 
-        # Incrementa o contador de novas empresas concluídas
         empresas_processadas += 1
         print(f"Progresso: {empresas_processadas}/{LIMITE_NOVAS_EMPRESAS} empresas adicionadas.")
         time.sleep(1)
